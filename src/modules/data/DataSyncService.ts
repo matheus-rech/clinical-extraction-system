@@ -11,7 +11,7 @@ import { SupabaseConfigurationError } from '@config/supabase.config';
 export class DataSyncService {
   private supabase = SupabaseService.getInstance();
 
-  async persistCurrentSession(formData: Record<string, string>): Promise<string | null> {
+  async persistCurrentSession(formData: Record<string, string>): Promise<string> {
     const state = AppStateManager.getState();
     const extractions: Extraction[] = state.extractions;
 
