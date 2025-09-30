@@ -18,9 +18,9 @@ and aligns with the debugging-first, production-ready requirements of the projec
   a `SupabaseService` abstraction so that future migrations (e.g., moving to a
   server-side proxy) require no component changes.
 
-This separation keeps write operations transactional—form data is inserted once,
-then all coordinate rows are inserted in a batch, ensuring referential integrity
-without the need for database transactions unavailable to anon clients.
+This separation means write operations are not atomic—form data is inserted first,
+then all coordinate rows are inserted in a batch. A failure in the second step can
+leave orphaned data, a limitation of client-side writes without transactions.
 
 ## Schema Design Decisions
 
