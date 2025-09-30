@@ -30,7 +30,7 @@ begin
   )
   values (
     document_name,
-    nullif(total_pages, 0),
+    total_pages,
     coordinate_count,
     form_payload,
     metadata
