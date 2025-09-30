@@ -59,7 +59,7 @@ supabase db push --file supabase/migrations/20250218_init_form_tables.sql
 
 The script is idempotent—`CREATE TABLE IF NOT EXISTS` guards let you re-run it in
 new environments without dropping data. Indexes on `document_name`,
-`submission_id`, and `created_at` keep PDF lookups and audit queries fast.
+`submission_id`, and `submitted_at` keep PDF lookups and audit queries fast.
 
 ## Vercel Deployment Configuration
 
