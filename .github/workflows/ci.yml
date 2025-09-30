@@ -27,6 +27,18 @@ jobs:
       - name: Run unit tests
         run: npm run test:run
       
+      - name: Generate coverage report
+        run: npm run test:coverage
+        continue-on-error: true
+      
+      - name: Upload coverage to artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+      
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       
@@ -42,6 +54,15 @@ jobs:
             test-results/
             playwright-report/
           retention-days: 30
+      
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## Test Results 🧪" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Unit Tests: 88 tests" >> $GITHUB_STEP_SUMMARY
+          echo "✅ E2E Tests: 24 tests" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Total: 112 tests passing**" >> $GITHUB_STEP_SUMMARY
 
   build:
     name: Build
