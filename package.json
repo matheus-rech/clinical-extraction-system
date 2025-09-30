@@ -1,0 +1,37 @@
+{
+  "name": "clinical-extraction-system",
+  "version": "2.0.0",
+  "description": "Modular clinical study extraction system with PDF integration",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:all": "npm run test:run && npm run test:e2e",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy"
+  },
+  "dependencies": {
+    "convex": "^1.17.4",
+    "pdfjs-dist": "^3.11.174"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.1",
+    "@testing-library/dom": "^10.4.1",
+    "@types/node": "^20.10.0",
+    "@vitest/ui": "^3.2.4",
+    "happy-dom": "^19.0.2",
+    "jsdom": "^27.0.0",
+    "sass": "^1.69.0",
+    "typescript": "^5.7.3",
+    "vite": "^5.0.0",
+    "vitest": "^3.2.4"
+  }
+}

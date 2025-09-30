@@ -1,0 +1,133 @@
+/**
+ * Form Styles
+ */
+
+@use '../variables' as *;
+
+.step {
+  display: none;
+
+  &.active {
+    display: block;
+  }
+}
+
+.form-group {
+  margin-bottom: $spacing-md;
+  padding: $spacing-xs;
+  border-radius: $border-radius-md;
+  transition: all $transition-normal;
+
+  &.active-extraction {
+    background: #fff3e0 !important;
+    padding: $spacing-sm !important;
+    margin: -$spacing-xs !important;
+    margin-bottom: $spacing-md !important;
+    border-left: 4px solid $warning-orange !important;
+    animation: pulse 1.5s infinite;
+  }
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: $spacing-xs;
+  color: $gray-700;
+}
+
+input[type="text"],
+input[type="number"],
+textarea,
+select {
+  width: 100%;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  border: 1px solid $gray-400;
+  border-radius: $border-radius-md;
+  font-size: 14px;
+}
+
+// Validation
+.validation-error {
+  border-color: $error-red !important;
+  background-color: #fff5f5 !important;
+}
+
+.validation-message {
+  color: $error-red;
+  font-size: 12px;
+  margin-top: 4px;
+  display: none;
+}
+
+.validation-error + .validation-message {
+  display: block;
+}
+
+// Field States
+.linked-input {
+  background-color: #f0f8ff;
+  border-color: #b3d7ff;
+
+  &.has-extraction {
+    background-color: #e8f5e9;
+    border-color: $success-green;
+  }
+}
+
+// Dynamic Containers
+.dynamic-container {
+  border: 1px solid #ddd;
+  padding: $spacing-md;
+  margin-top: $spacing-md;
+  border-radius: $border-radius-md;
+  background-color: #f9f9f9;
+}
+
+// Grids
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+}
+
+.grid-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: $spacing-md;
+}
+
+.grid-mrs {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: $spacing-xs;
+}
+
+// Progress Bar
+#progress-bar-container {
+  width: 100%;
+  background-color: #e0e0e0;
+  border-radius: $border-radius-md;
+  margin-bottom: $spacing-lg;
+}
+
+#progress-bar {
+  width: 0%;
+  height: 10px;
+  background: linear-gradient(90deg, $success-green, $success-green-light);
+  border-radius: $border-radius-md;
+  transition: width $transition-slow ease;
+}
+
+// Navigation
+.navigation {
+  position: sticky;
+  bottom: 0;
+  background: $background-white;
+  padding: $spacing-md $spacing-lg;
+  border-top: 2px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: $spacing-xl;
+}

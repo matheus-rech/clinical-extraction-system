@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical Study Extraction System - Modular</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; img-src 'self' data: blob:;">
+    
+    <!-- PDF.js is now bundled via npm package -->
+</head>
+<body>
+    <div class="main-container">
+        <!-- Form Panel (Left) -->
+        <div class="form-panel">
+            <h1>Clinical Study Master Extraction</h1>
+            <p class="subtitle">
+                Click a field, then highlight text in the PDF to extract with full traceability.
+            </p>
+            
+            <!-- Progress Bar -->
+            <div id="progress-bar-container">
+                <div id="progress-bar"></div>
+            </div>
+            
+            <!-- Main Form -->
+            <form id="extraction-form">
+                <!-- Step 1: Study ID -->
+                <div class="step active" id="step-1">
+                    <h2>Step 1: Study ID</h2>
+                    <div class="form-group">
+                        <label for="citation">Full Citation (Required)</label>
+                        <textarea id="citation" name="citation" class="linked-input" placeholder="Click here then highlight in PDF" required></textarea>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label for="doi">DOI</label>
+                            <input type="text" id="doi" name="doi" class="linked-input" data-validation="doi">
+                            <span class="validation-message">Invalid DOI format</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="pmid">PMID</label>
+                            <input type="text" id="pmid" name="pmid" class="linked-input" data-validation="pmid">
+                            <span class="validation-message">PMID must be numeric</span>
+                        </div>
+                    </div>
+                    <div class="grid-3col">
+                        <div class="form-group">
+                            <label for="journal">Journal</label>
+                            <input type="text" id="journal" name="journal" class="linked-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="year">Year</label>
+                            <input type="number" id="year" name="year" class="linked-input" data-validation="year">
+                            <span class="validation-message">Invalid year</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="country">Country</label>
+                            <input type="text" id="country" name="country" class="linked-input">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="centers">Centers (e.g., Single, Multi)</label>
+                        <input type="text" id="centers" name="centers" class="linked-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="funding">Funding Sources</label>
+                        <textarea id="funding" name="funding" class="linked-input"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="conflicts">Conflicts of Interest</label>
+                        <textarea id="conflicts" name="conflicts" class="linked-input"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="registration">Trial Registration ID</label>
+                        <input type="text" id="registration" name="registration" class="linked-input">
+                    </div>
+                </div>
+                
+                <!-- Step 2: PICO-T -->
+                <div class="step" id="step-2">
+                    <h2>Step 2: PICO-T</h2>
+                    <div class="form-group">
+                        <label for="eligibility-population">Population</label>
+                        <textarea id="eligibility-population" name="eligibility-population" class="linked-input"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="eligibility-intervention">Intervention</label>
+                        <textarea id="eligibility-intervention" name="eligibility-intervention" class="linked-input"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="eligibility-comparator">Comparator</label>
+                        <textarea id="eligibility-comparator" name="eligibility-comparator" class="linked-input"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="eligibility-outcomes">Outcomes Measured</label>
+                        <textarea id="eligibility-outcomes" name="eligibility-outcomes" class="linked-input"></textarea>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label for="eligibility-timing">Timing/Follow-up</label>
+                            <input type="text" id="eligibility-timing" name="eligibility-timing" class="linked-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="eligibility-type">Study Type (e.g., RCT, Cohort)</label>
+                            <input type="text" id="eligibility-type" name="eligibility-type" class="linked-input">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inclusion-met">Inclusion Criteria Met?</label>
+                        <select id="inclusion-met" name="inclusion-met" required>
+                            <option value="">Select...</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No (Stop Extraction)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Step 3: Baseline -->
+                <div class="step" id="step-3">
+                    <h2>Step 3: Baseline</h2>
+                    <h3>Sample Size</h3>
+                    <div class="grid-3col">
+                        <div class="form-group">
+                            <label for="totalN">Total N (Required)</label>
+                            <input type="number" id="totalN" name="totalN" class="linked-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="surgicalN">Surgical N</label>
+                            <input type="number" id="surgicalN" name="surgicalN" class="linked-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="controlN">Control N</label>
+                            <input type="number" id="controlN" name="controlN" class="linked-input">
+                        </div>
+                    </div>
+                    <h3>Age Demographics</h3>
+                    <div class="dynamic-container">
+                        <div class="grid-2col">
+                            <div class="form-group">
+                                <label for="ageMean">Age Mean</label>
+                                <input type="number" step="0.1" id="ageMean" name="ageMean" class="linked-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="ageSD">Age SD</label>
+                                <input type="number" step="0.1" id="ageSD" name="ageSD" class="linked-input">
+                            </div>
+                        </div>
+                        <div class="grid-3col">
+                            <div class="form-group">
+                                <label for="ageMedian">Age Median</label>
+                                <input type="number" step="0.1" id="ageMedian" name="ageMedian" class="linked-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="ageIQR_lower">Age IQR (Lower/Q1)</label>
+                                <input type="number" step="0.1" id="ageIQR_lower" name="ageIQR_lower" class="linked-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="ageIQR_upper">Age IQR (Upper/Q3)</label>
+                                <input type="number" step="0.1" id="ageIQR_upper" name="ageIQR_upper" class="linked-input">
+                            </div>
+                        </div>
+                    </div>
+                    <h3>Gender</h3>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label for="maleN">Male N</label>
+                            <input type="number" id="maleN" name="maleN" class="linked-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="femaleN">Female N</label>
+                            <input type="number" id="femaleN" name="femaleN" class="linked-input">
+                        </div>
+                    </div>
+                    <h3>Baseline Clinical Scores</h3>
+                    <div class="grid-3col">
+                        <div class="form-group">
+                            <label for="prestrokeMRS">Pre-stroke mRS</label>
+                            <input type="number" step="0.1" id="prestrokeMRS" name="prestrokeMRS" class="linked-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="nihssMean">NIHSS Mean/Median</label>
+                            <input type="number" step="0.1" id="nihssMean" name="nihssMean" class="linked-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="gcsMean">GCS Mean/Median</label>
+                            <input type="number" step="0.1" id="gcsMean" name="gcsMean" class="linked-input">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Step 4: Imaging -->
+                <div class="step" id="step-4">
+                    <h2>Step 4: Imaging</h2>
+                    <div class="form-group">
+                        <label for="vascularTerritory">Vascular Territory</label>
+                        <input type="text" id="vascularTerritory" name="vascularTerritory" class="linked-input">
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label for="infarctVolume">Infarct Volume</label>
+                            <input type="number" step="0.1" id="infarctVolume" name="infarctVolume" class="linked-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="strokeVolumeCerebellum">Stroke Volume (Cerebellum)</label>
+                            <input type="text" id="strokeVolumeCerebellum" name="strokeVolumeCerebellum" class="linked-input">
+                        </div>
+                    </div>
+                    <h3>Edema Dynamics</h3>
+                    <div class="form-group">
+                        <label for="edemaDynamics">Edema Description</label>
+                        <textarea id="edemaDynamics" name="edemaDynamics" class="linked-input"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="peakSwellingWindow">Peak Swelling Window</label>
+                        <input type="text" id="peakSwellingWindow" name="peakSwellingWindow" class="linked-input">
+                    </div>
+                    <h3>Involvement Areas</h3>
+                    <div class="grid-3col">
+                        <div class="form-group">
+                            <label for="brainstemInvolvement">Brainstem Involvement?</label>
+                            <select id="brainstemInvolvement" name="brainstemInvolvement">
+                                <option value="null">Unknown</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="supratentorialInvolvement">Supratentorial?</label>
+                            <select id="supratentorialInvolvement" name="supratentorialInvolvement">
+                                <option value="null">Unknown</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="nonCerebellarStroke">Non-cerebellar?</label>
+                            <select id="nonCerebellarStroke" name="nonCerebellarStroke">
+                                <option value="null">Unknown</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Step 5: Interventions -->
+                <div class="step" id="step-5">
+                    <h2>Step 5: Interventions</h2>
+                    <h3>Surgical Indications</h3>
+                    <div id="indications-container"></div>
+                    <button type="button" class="add-btn" onclick="addIndication()">+ Add Indication</button>
+                    <h3>Interventions</h3>
+                    <div id="interventions-container"></div>
+                    <button type="button" class="add-btn" onclick="addIntervention()">+ Add Intervention Type</button>
+                </div>
+                
+                <!-- Step 6: Study Arms -->
+                <div class="step" id="step-6">
+                    <h2>Step 6: Study Arms</h2>
+                    <p class="subtitle">Define the distinct groups for comparison.</p>
+                    <div id="arms-container"></div>
+                    <button type="button" class="add-btn" onclick="addArm()">+ Add Study Arm</button>
+                </div>
+                
+                <!-- Step 7: Outcomes -->
+                <div class="step" id="step-7">
+                    <h2>Step 7: Outcomes</h2>
+                    <h3>Mortality Data</h3>
+                    <div id="mortality-global-container"></div>
+                    <button type="button" class="add-btn" onclick="addMortality()">+ Add Mortality Data</button>
+                    <h3>Modified Rankin Scale (mRS)</h3>
+                    <div id="mrs-global-container"></div>
+                    <button type="button" class="add-btn" onclick="addMRS()">+ Add mRS Data</button>
+                </div>
+                
+                <!-- Step 8: Complications -->
+                <div class="step" id="step-8">
+                    <h2>Step 8: Complications</h2>
+                    <h3>Complications</h3>
+                    <div id="complications-container"></div>
+                    <button type="button" class="add-btn" onclick="addComplication()">+ Add Complication</button>
+                    <h3>Predictors of Outcome</h3>
+                    <div class="form-group">
+                        <label for="predictorsPoorOutcomeSurgical">Summary of Predictors</label>
+                        <textarea id="predictorsPoorOutcomeSurgical" name="predictorsPoorOutcomeSurgical" class="linked-input"></textarea>
+                    </div>
+                    <h4>Predictor Analysis</h4>
+                    <div id="predictors-container"></div>
+                    <button type="button" class="add-btn" onclick="addPredictor()">+ Add Predictor</button>
+                </div>
+            </form>
+            
+            <!-- Navigation -->
+            <div class="navigation">
+                <div id="step-indicator">Step 1 of 8</div>
+                <div>
+                    <button id="prev-btn" disabled>Previous</button>
+                    <button id="next-btn">Next</button>
+                    <button id="submit-btn" class="hidden">Finish Extraction</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PDF Panel (Center) -->
+        <div class="pdf-panel">
+            <div class="pdf-toolbar">
+                <button id="pdf-upload-btn">📄 Load PDF</button>
+                <input type="file" id="pdf-file" accept=".pdf" aria-label="Upload PDF file" style="display: none;">
+                <button id="pdf-prev-page">◄</button>
+                <span class="toolbar-text">
+                    Page <input type="number" id="page-num" value="1" min="1" aria-label="Page number"> 
+                    of <span id="total-pages">0</span>
+                </span>
+                <button id="pdf-next-page">►</button>
+                <select id="zoom-level" aria-label="Zoom level">
+                    <option value="0.75">75%</option>
+                    <option value="1" selected>100%</option>
+                    <option value="1.25">125%</option>
+                    <option value="1.5">150%</option>
+                </select>
+                <button id="fit-width">Fit Width</button>
+                <span id="active-field-indicator">No field selected</span>
+            </div>
+            <div id="pdf-container" class="pdf-container">
+                <div id="upload-area" class="upload-area">
+                    <h3>📄 Drop PDF file here or click to browse</h3>
+                    <label for="pdf-file-2" class="upload-link">
+                        Select PDF File
+                    </label>
+                    <input type="file" id="pdf-file-2" accept=".pdf" aria-label="Upload PDF file" style="display: none;">
+                </div>
+                <div id="pdf-pages" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <!-- Trace Panel (Right) -->
+        <div class="trace-panel">
+            <h2 class="trace-title">Extraction Trace Log</h2>
+            <div class="markdown-section">
+                <h4>📝 Markdown Assistant</h4>
+                <button onclick="document.getElementById('markdown-file').click()">Load Markdown</button>
+                <button onclick="toggleSearchInterface()">Search Text</button>
+                <input type="file" id="markdown-file" accept=".md,.txt" aria-label="Upload markdown file" style="display: none;">
+                <div id="markdown-status"></div>
+                <div id="search-interface" class="search-interface">
+                    <textarea id="search-query" placeholder="Paste or type text to search in PDF..."></textarea>
+                    <button onclick="searchInPDF()" class="full-width">🔍 Find in PDF</button>
+                    <div id="search-results" class="search-results"></div>
+                </div>
+            </div>
+            <div class="export-section">
+                <h4>Export Options</h4>
+                <div class="export-buttons">
+                    <button onclick="exportJSON()" class="export-json">📄 JSON</button>
+                    <button onclick="exportCSV()" class="export-csv">📊 CSV</button>
+                    <button onclick="exportAudit()" class="export-audit">📋 Audit</button>
+                    <button onclick="exportAnnotatedPDF()" class="export-pdf">📑 PDF</button>
+                </div>
+            </div>
+            <div class="stats-container">
+                <div class="stats-row">
+                    <span>Total Extractions:</span>
+                    <strong id="extraction-count">0</strong>
+                </div>
+                <div class="stats-row">
+                    <span>Pages with Data:</span>
+                    <strong id="pages-with-data">0</strong>
+                </div>
+            </div>
+            <div id="trace-log"></div>
+        </div>
+    </div>
+    
+    <!-- Status Message -->
+    <div id="extraction-status" class="extraction-status">
+        <span id="status-message"></span>
+    </div>
+    
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loading-spinner">
+        <div class="spinner"></div>
+    </div>
+    
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+/**
+ * Button Styles
+ */
+
+@use '../variables' as *;
+
+button {
+  padding: $spacing-sm $spacing-lg;
+  cursor: pointer;
+  border: none;
+  border-radius: $border-radius-md;
+  background-color: $primary-blue;
+  color: white;
+  font-size: 16px;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $primary-blue-dark;
+  }
+
+  &:disabled {
+    background-color: $gray-400;
+    cursor: not-allowed;
+  }
+}
+
+.add-btn {
+  background-color: #28a745;
+  font-size: 14px;
+  padding: 6px 12px;
+  margin-top: $spacing-sm;
+
+  &:hover {
+    background-color: #218838;
+  }
+}
+
+.remove-btn {
+  background-color: #dc3545;
+  font-size: 14px;
+  padding: 6px 12px;
+  margin-top: $spacing-sm;
+
+  &:hover {
+    background-color: $error-red-dark;
+  }
+}
+
+.hidden,
+input[type="file"] {
+  display: none;
+}
+
+.full-width {
+  width: 100%;
+}

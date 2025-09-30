@@ -1,0 +1,192 @@
+/**
+ * PDF Viewer Styles
+ */
+
+@use '../variables' as *;
+
+.pdf-toolbar {
+  background: $gray-800;
+  color: white;
+  padding: $spacing-sm;
+  display: flex;
+  gap: $spacing-sm;
+  align-items: center;
+  box-shadow: $shadow-sm;
+  flex-wrap: wrap;
+
+  button {
+    background: #34495e;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: $border-radius-md;
+    cursor: pointer;
+    font-size: 14px;
+
+    &:hover {
+      background: #4a5f7f;
+    }
+  }
+
+  input[type="number"] {
+    width: 50px;
+    text-align: center;
+    padding: 4px;
+  }
+
+  select {
+    padding: 4px 8px;
+    border-radius: $border-radius-md;
+  }
+}
+
+#active-field-indicator {
+  background: $warning-orange;
+  padding: 4px 12px;
+  border-radius: $border-radius-md;
+  margin-left: auto;
+}
+
+.pdf-container {
+  flex: 1;
+  overflow: auto;
+  background: $gray-600;
+  position: relative;
+  padding: $spacing-lg 0;
+}
+
+.pdf-page {
+  margin: $spacing-lg auto;
+  background: white;
+  box-shadow: $shadow-lg;
+  position: relative;
+}
+
+.upload-area {
+  border: 2px dashed $gray-400;
+  border-radius: $border-radius-xl;
+  padding: 50px;
+  text-align: center;
+  margin: 50px;
+  background: white;
+}
+
+.upload-link {
+  cursor: pointer;
+  color: $primary-blue;
+  text-decoration: underline;
+}
+
+.toolbar-text {
+  color: white;
+}
+
+// Text Layer
+.textLayer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  line-height: 1;
+
+  > span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+  }
+
+  ::selection {
+    background: rgba(0, 123, 255, 0.3);
+  }
+
+  &.active-selection ::selection {
+    background: rgba(255, 193, 7, 0.4);
+  }
+
+  .highlight {
+    background: rgba(255, 193, 7, 0.4) !important;
+  }
+
+  .extracted {
+    background: rgba(76, 175, 80, 0.2) !important;
+  }
+
+  .search-highlight {
+    background: rgba(255, 87, 34, 0.5) !important;
+    color: transparent !important;
+  }
+}
+
+// Extraction Markers
+.extraction-marker {
+  position: absolute;
+  border: 2px solid $success-green;
+  background: rgba(76, 175, 80, 0.15);
+  pointer-events: all;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(76, 175, 80, 0.3);
+    z-index: 1000;
+  }
+
+  &::before {
+    content: attr(data-field);
+    position: absolute;
+    top: -24px;
+    left: 0;
+    background: $success-green;
+    color: white;
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: $border-radius-sm;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity $transition-normal;
+    z-index: 1001;
+    pointer-events: none;
+  }
+
+  &:hover::before {
+    opacity: 1;
+  }
+}
+
+// Search Result Markers
+.search-marker {
+  position: absolute;
+  border: 2px solid #FF5722;
+  background: rgba(255, 87, 34, 0.2);
+  pointer-events: all;
+  cursor: pointer;
+  z-index: 500;
+
+  &:hover {
+    background: rgba(255, 87, 34, 0.4);
+  }
+
+  &::before {
+    content: "Match";
+    position: absolute;
+    top: -24px;
+    left: 0;
+    background: #FF5722;
+    color: white;
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: $border-radius-sm;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity $transition-normal;
+    z-index: 1001;
+  }
+
+  &:hover::before {
+    opacity: 1;
+  }
+}

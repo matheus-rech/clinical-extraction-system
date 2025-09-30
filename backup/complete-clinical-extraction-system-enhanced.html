@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Clinical Study Extraction System - Enhanced with Markdown Search</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+/* Global Layout */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    background-color: #f0f2f5;
+}
+
+.main-container {
+    display: flex;
+    height: 100vh;
+}
+
+/* Three-Panel Layout */
+.form-panel {
+    width: 35%;
+    background: white;
+    overflow-y: auto;
+    padding: 20px 30px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.pdf-panel {
+    width: 45%;
+    background: #e9ecef;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.trace-panel {
+    width: 20%;
+    background: white;
+    border-left: 1px solid #ccc;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* Form Styles */
+h1 { 
+    color: #333;
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+h2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+    margin-top: 20px;
+}
+
+h3 { 
+    color: #555;
+    margin-top: 20px;
+}
+
+.step { display: none; }
+.step.active { display: block; }
+
+.form-group { 
+    margin-bottom: 15px;
+    padding: 5px;
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+input[type="text"], input[type="number"], textarea, select {
+    width: 100%;
+    padding: 8px 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Active Field Highlighting */
+.form-group.active-extraction {
+    background: #fff3e0 !important;
+    padding: 10px !important;
+    margin: -5px !important;
+    margin-bottom: 15px !important;
+    border-left: 4px solid #ff9800 !important;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { background: #fff3e0; }
+    50% { background: #ffe0b2; }
+    100% { background: #fff3e0; }
+}
+
+/* Field States */
+.linked-input {
+    background-color: #f0f8ff;
+    border-color: #b3d7ff;
+}
+
+.linked-input.has-extraction {
+    background-color: #e8f5e9;
+    border-color: #4CAF50;
+}
+
+.linked-input.has-extraction::after {
+    content: '✓';
+    position: absolute;
+    right: 10px;
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+/* Dynamic Containers */
+.dynamic-container {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-top: 15px;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.grid-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+.grid-mrs { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+
+/* Buttons */
+button {
+    padding: 10px 20px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: white;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+button:hover { background-color: #0056b3; }
+button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+.add-btn {
+    background-color: #28a745;
+    font-size: 14px;
+    padding: 6px 12px;
+    margin-top: 10px;
+}
+.add-btn:hover { background-color: #218838; }
+
+.remove-btn {
+    background-color: #dc3545;
+    font-size: 14px;
+    padding: 6px 12px;
+    margin-top: 10px;
+}
+.remove-btn:hover { background-color: #c82333; }
+
+/* Progress Bar */
+#progress-bar-container {
+    width: 100%;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+#progress-bar {
+    width: 0%;
+    height: 10px;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    border-radius: 5px;
+    transition: width 0.4s ease;
+}
+
+/* Navigation */
+.navigation {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 15px 20px;
+    border-top: 2px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30px;
+}
+
+/* PDF Viewer Styles */
+.pdf-toolbar {
+    background: #2c3e50;
+    color: white;
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    flex-wrap: wrap;
+}
+
+.pdf-toolbar button {
+    background: #34495e;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.pdf-toolbar button:hover {
+    background: #4a5f7f;
+}
+
+.pdf-toolbar input[type="number"] {
+    width: 50px;
+    text-align: center;
+    padding: 4px;
+}
+
+.pdf-toolbar select {
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+#active-field-indicator {
+    background: #ff9800;
+    padding: 4px 12px;
+    border-radius: 4px;
+    margin-left: auto;
+}
+
+.pdf-container {
+    flex: 1;
+    overflow: auto;
+    background: #525252;
+    position: relative;
+    padding: 20px 0;
+}
+
+.pdf-page {
+    margin: 20px auto;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.upload-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 50px;
+    text-align: center;
+    margin: 50px;
+    background: white;
+}
+
+/* Text Layer */
+.textLayer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 0.2;
+    line-height: 1;
+}
+
+.textLayer > span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+}
+
+.textLayer ::selection {
+    background: rgba(0, 123, 255, 0.3);
+}
+
+.textLayer.active-selection ::selection {
+    background: rgba(255, 193, 7, 0.4);
+}
+
+.textLayer .highlight {
+    background: rgba(255, 193, 7, 0.4) !important;
+}
+
+.textLayer .extracted {
+    background: rgba(76, 175, 80, 0.2) !important;
+}
+
+.textLayer .search-highlight {
+    background: rgba(255, 87, 34, 0.5) !important;
+    color: transparent !important;
+}
+
+/* Extraction Markers */
+.extraction-marker {
+    position: absolute;
+    border: 2px solid #4CAF50;
+    background: rgba(76, 175, 80, 0.15);
+    pointer-events: all;
+    cursor: pointer;
+}
+
+.extraction-marker:hover {
+    background: rgba(76, 175, 80, 0.3);
+    z-index: 1000;
+}
+
+.extraction-marker::before {
+    content: attr(data-field);
+    position: absolute;
+    top: -24px;
+    left: 0;
+    background: #4CAF50;
+    color: white;
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 3px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 1001;
+    pointer-events: none;
+}
+
+.extraction-marker:hover::before {
+    opacity: 1;
+}
+
+/* Search Result Markers */
+.search-marker {
+    position: absolute;
+    border: 2px solid #FF5722;
+    background: rgba(255, 87, 34, 0.2);
+    pointer-events: all;
+    cursor: pointer;
+    z-index: 500;
+}
+
+.search-marker:hover {
+    background: rgba(255, 87, 34, 0.4);
+}
+
+.search-marker::before {
+    content: "Match";
+    position: absolute;
+    top: -24px;
+    left: 0;
+    background: #FF5722;
+    color: white;
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 3px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 1001;
+}
+
+.search-marker:hover::before {
+    opacity: 1;
+}
+
+/* Trace Log Styles */
+.trace-entry {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 12px;
+}
+
+.trace-entry:hover {
+    background: #e3f2fd;
+    border-color: #2196F3;
+    transform: translateX(3px);
+}
+
+.trace-entry .field-label {
+    font-weight: bold;
+    color: #1976D2;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.trace-entry .extracted-text {
+    color: #333;
+    font-size: 11px;
+    margin: 6px 0;
+    padding: 4px;
+    background: white;
+    border-left: 3px solid #4CAF50;
+    display: block;
+    word-wrap: break-word;
+}
+
+.trace-entry .metadata {
+    font-size: 10px;
+    color: #666;
+}
+
+/* Export Section */
+.export-section {
+    background: #f0f8ff;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.export-section h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+}
+
+.export-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.export-buttons button {
+    padding: 6px;
+    font-size: 11px;
+}
+
+/* Markdown Section */
+.markdown-section {
+    background: #fff3e0;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border: 1px solid #FF9800;
+}
+
+.markdown-section h4 {
+    margin: 0 0 8px 0;
+    color: #FF9800;
+    font-size: 14px;
+}
+
+.markdown-section button {
+    padding: 6px 12px;
+    font-size: 12px;
+    background: #FF9800;
+    margin-right: 5px;
+}
+
+.markdown-section button:hover {
+    background: #F57C00;
+}
+
+.search-interface {
+    margin-top: 10px;
+    padding: 10px;
+    background: white;
+    border-radius: 4px;
+    display: none;
+}
+
+.search-interface.active {
+    display: block;
+}
+
+.search-interface textarea {
+    width: 100%;
+    height: 80px;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.search-results {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+.search-result-item {
+    padding: 8px;
+    background: #f5f5f5;
+    margin-bottom: 5px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.search-result-item:hover {
+    background: #e0e0e0;
+}
+
+/* Status Message */
+.extraction-status {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: none;
+    z-index: 1000;
+}
+
+.extraction-status.show {
+    display: block;
+    animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+</style>
+</head>
+<body>
+
+<div class="main-container">
+    <!-- Form Panel (Left) -->
+    <div class="form-panel">
+        <h1>Clinical Study Master Extraction</h1>
+        <p style="font-size: 14px; color: #666; margin-bottom: 15px;">
+            Click a field, then highlight text in the PDF to extract with full traceability.
+        </p>
+        
+        <!-- Progress Bar -->
+        <div id="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
+        
+        <!-- Main Form -->
+        <form id="extraction-form">
+            
+            <!-- Step 1: Study ID -->
+            <div class="step active" id="step-1">
+                <h2>Step 1: Study ID</h2>
+                
+                <div class="form-group">
+                    <label for="citation">Full Citation (Required)</label>
+                    <textarea id="citation" name="citation" class="linked-input" placeholder="Click here then highlight in PDF" required></textarea>
+                </div>
+                
+                <div class="grid-2col">
+                    <div class="form-group">
+                        <label for="doi">DOI</label>
+                        <input type="text" id="doi" name="doi" class="linked-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="pmid">PMID</label>
+                        <input type="text" id="pmid" name="pmid" class="linked-input">
+                    </div>
+                </div>
+                
+                <div class="grid-3col">
+                    <div class="form-group">
+                        <label for="journal">Journal</label>
+                        <input type="text" id="journal" name="journal" class="linked-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="year">Year</label>
+                        <input type="number" id="year" name="year" class="linked-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="country">Country</label>
+                        <input type="text" id="country" name="country" class="linked-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="centers">Centers (e.g., Single, Multi)</label>
+                    <input type="text" id="centers" name="centers" class="linked-input">
+                </div>
+                
+                <div class="form-group">
+                    <label for="funding">Funding Sources</label>
+                    <textarea id="funding" name="funding" class="linked-input"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="conflicts">Conflicts of Interest</label>
+                    <textarea id="conflicts" name="conflicts" class="linked-input"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registration">Trial Registration ID</label>
+                    <input type="text" id="registration" name="registration" class="linked-input">
+                </div>
+            </div>
+            
+            <!-- Step 2: PICO-T -->
+            <div class="step" id="step-2">
+                <h2>Step 2: PICO-T</h2>
+                
+                <div class="form-group">
+                    <label for="eligibility-population">Population</label>
+                    <textarea id="eligibility-population" name="eligibility-population" class="linked-input"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="eligibility-intervention">Intervention</label>
+                    <textarea id="eligibility-intervention" name="eligibility-intervention" class="linked-input"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="eligibility-comparator">Comparator</label>
+                    <textarea id="eligibility-comparator" name="eligibility-comparator" class="linked-input"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="eligibility-outcomes">Outcomes Measured</label>
+                    <textarea id="eligibility-outcomes" name="eligibility-outcomes" class="linked-input"></textarea>
+                </div>
+                
+                <div class="grid-2col">
+                    <div class="form-group">
+                        <label for="eligibility-timing">Timing/Follow-up</label>
+                        <input type="text" id="eligibility-timing" name="eligibility-timing" class="linked-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="eligibility-type">Study Type (e.g., RCT, Cohort)</label>
+                        <input type="text" id="eligibility-type" name="eligibility-type" class="linked-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="inclusion-met">Inclusion Criteria Met?</label>
+                    <select id="inclusion-met" name="inclusion-met" required>
+                        <option value="">Select...</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No (Stop Extraction)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Step 3: Baseline -->
+            <div class="step" id="step-3">
+                <h2>Step 3: Baseline</h2>
+                
+                <h3>Sample Size</h3>
+                <div class="grid-3col">
+                    <div class="form-group">
+                        <label for="totalN">Total N (Required)</label>
+                        <input type="number" id="totalN" name="totalN" class="linked-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="surgicalN">Surgical N</label>
+                        <input type="number" id="surgicalN" name="surgicalN" class="linked-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="controlN">Control N</label>
+                        <input type="number" id="controlN" name="controlN" class="linked-input">
+                    </div>
+                </div>
+                
+                <h3>Age Demographics</h3>
+                <div class="dynamic-container">
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label for="ageMean">Age Mean</label>
+                            <input type="number" step="0.1" id="ageMean" name="ageMean" class="linked-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="ageSD">Age SD</label>
+                            <input type="number" step="0.1" id="ageSD" name="ageSD" class="linked-input">
+                        </div>
+                    </div>
+                    <div class="grid-3col">
+                        <div class="form-group">
+                            <label for="ageMedian">Age Median</label>
+                            <input type="number" step="0.1" id="ageMedian" name="ageMedian" class="linked-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="ageIQR_lower">Age IQR (Lower/Q1)</label>
+                            <input type="number" step="0.1" id="ageIQR_lower" name="ageIQR_lower" class="linked-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="ageIQR_upper">Age IQR (Upper/Q3)</label>
+                            <input type="number" step="0.1" id="ageIQR_upper" name="ageIQR_upper" class="linked-input">
+                        </div>
+                    </div>
+                </div>
+                
+                <h3>Gender</h3>
+                <div class="grid-2col">
+                    <div class="form-group">
+                        <label for="maleN">Male N</label>
+                        <input type="number" id="maleN" name="maleN" class="linked-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="femaleN">Female N</label>
+                        <input type="number" id="femaleN" name="femaleN" class="linked-input">
+                    </div>
+                </div>
+                
+                <h3>Baseline Clinical Scores</h3>
+                <div class="grid-3col">
+                    <div class="form-group">
+                        <label for="prestrokeMRS">Pre-stroke mRS</label>
+                        <input type="number" step="0.1" id="prestrokeMRS" name="prestrokeMRS" class="linked-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="nihssMean">NIHSS Mean/Median</label>
+                        <input type="number" step="0.1" id="nihssMean" name="nihssMean" class="linked-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="gcsMean">GCS Mean/Median</label>
+                        <input type="number" step="0.1" id="gcsMean" name="gcsMean" class="linked-input">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 4: Imaging -->
+            <div class="step" id="step-4">
+                <h2>Step 4: Imaging</h2>
+                
+                <div class="form-group">
+                    <label for="vascularTerritory">Vascular Territory</label>
+                    <input type="text" id="vascularTerritory" name="vascularTerritory" class="linked-input">
+                </div>
+                
+                <div class="grid-2col">
+                    <div class="form-group">
+                        <label for="infarctVolume">Infarct Volume</label>
+                        <input type="number" step="0.1" id="infarctVolume" name="infarctVolume" class="linked-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="strokeVolumeCerebellum">Stroke Volume (Cerebellum)</label>
+                        <input type="text" id="strokeVolumeCerebellum" name="strokeVolumeCerebellum" class="linked-input">
+                    </div>
+                </div>
+                
+                <h3>Edema Dynamics</h3>
+                <div class="form-group">
+                    <label for="edemaDynamics">Edema Description</label>
+                    <textarea id="edemaDynamics" name="edemaDynamics" class="linked-input"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="peakSwellingWindow">Peak Swelling Window</label>
+                    <input type="text" id="peakSwellingWindow" name="peakSwellingWindow" class="linked-input">
+                </div>
+                
+                <h3>Involvement Areas</h3>
+                <div class="grid-3col">
+                    <div class="form-group">
+                        <label for="brainstemInvolvement">Brainstem Involvement?</label>
+                        <select id="brainstemInvolvement" name="brainstemInvolvement">
+                            <option value="null">Unknown</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="supratentorialInvolvement">Supratentorial?</label>
+                        <select id="supratentorialInvolvement" name="supratentorialInvolvement">
+                            <option value="null">Unknown</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="nonCerebellarStroke">Non-cerebellar?</label>
+                        <select id="nonCerebellarStroke" name="nonCerebellarStroke">
+                            <option value="null">Unknown</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 5: Interventions -->
+            <div class="step" id="step-5">
+                <h2>Step 5: Interventions</h2>
+                
+                <h3>Surgical Indications</h3>
+                <div id="indications-container"></div>
+                <button type="button" class="add-btn" onclick="addIndication()">+ Add Indication</button>
+                
+                <h3>Interventions</h3>
+                <div id="interventions-container"></div>
+                <button type="button" class="add-btn" onclick="addIntervention()">+ Add Intervention Type</button>
+            </div>
+            
+            <!-- Step 6: Study Arms -->
+            <div class="step" id="step-6">
+                <h2>Step 6: Study Arms</h2>
+                <p style="font-size: 14px; color: #666;">Define the distinct groups for comparison.</p>
+                <div id="arms-container"></div>
+                <button type="button" class="add-btn" onclick="addArm()">+ Add Study Arm</button>
+            </div>
+            
+            <!-- Step 7: Outcomes -->
+            <div class="step" id="step-7">
+                <h2>Step 7: Outcomes</h2>
+                
+                <h3>Mortality Data</h3>
+                <div id="mortality-global-container"></div>
+                <button type="button" class="add-btn" onclick="addMortality()">+ Add Mortality Data</button>
+                
+                <h3>Modified Rankin Scale (mRS)</h3>
+                <div id="mrs-global-container"></div>
+                <button type="button" class="add-btn" onclick="addMRS()">+ Add mRS Data</button>
+            </div>
+            
+            <!-- Step 8: Complications -->
+            <div class="step" id="step-8">
+                <h2>Step 8: Complications</h2>
+                
+                <h3>Complications</h3>
+                <div id="complications-container"></div>
+                <button type="button" class="add-btn" onclick="addComplication()">+ Add Complication</button>
+                
+                <h3>Predictors of Outcome</h3>
+                <div class="form-group">
+                    <label for="predictorsPoorOutcomeSurgical">Summary of Predictors</label>
+                    <textarea id="predictorsPoorOutcomeSurgical" name="predictorsPoorOutcomeSurgical" class="linked-input"></textarea>
+                </div>
+                
+                <h4>Predictor Analysis</h4>
+                <div id="predictors-container"></div>
+                <button type="button" class="add-btn" onclick="addPredictor()">+ Add Predictor</button>
+            </div>
+        </form>
+        
+        <!-- Navigation -->
+        <div class="navigation">
+            <div id="step-indicator">Step 1 of 8</div>
+            <div>
+                <button id="prev-btn" disabled>Previous</button>
+                <button id="next-btn">Next</button>
+                <button id="submit-btn" style="display: none;">Finish Extraction</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PDF Panel (Center) -->
+    <div class="pdf-panel">
+        <!-- PDF Toolbar -->
+        <div class="pdf-toolbar">
+            <button id="pdf-upload-btn">📄 Load PDF</button>
+            <input type="file" id="pdf-file" accept=".pdf" style="display: none;">
+            
+            <button id="pdf-prev-page">◄</button>
+            <span style="color: white;">
+                Page <input type="number" id="page-num" value="1" min="1" aria-label="Page number"> 
+                of <span id="total-pages">0</span>
+            </span>
+            <button id="pdf-next-page">►</button>
+            
+            <select id="zoom-level" aria-label="Zoom level">
+                <option value="0.75">75%</option>
+                <option value="1" selected>100%</option>
+                <option value="1.25">125%</option>
+                <option value="1.5">150%</option>
+            </select>
+            
+            <button id="fit-width">Fit Width</button>
+            
+            <span id="active-field-indicator">No field selected</span>
+        </div>
+        
+        <!-- PDF Container -->
+        <div id="pdf-container" class="pdf-container">
+            <div id="upload-area" class="upload-area">
+                <h3>📄 Drop PDF file here or click to browse</h3>
+                <label for="pdf-file-2" style="cursor: pointer; color: #007bff; text-decoration: underline;">
+                    Select PDF File
+                </label>
+                <input type="file" id="pdf-file-2" accept=".pdf" style="display: none;">
+            </div>
+            <div id="pdf-pages" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <!-- Trace Panel (Right) -->
+    <div class="trace-panel">
+        <h2 style="font-size: 18px; margin-top: 0;">Extraction Trace Log</h2>
+        
+        <!-- Markdown Search Section -->
+        <div class="markdown-section">
+            <h4>📝 Markdown Assistant</h4>
+            <button onclick="document.getElementById('markdown-file').click()">Load Markdown</button>
+            <button onclick="toggleSearchInterface()">Search Text</button>
+            <input type="file" id="markdown-file" accept=".md,.txt" style="display: none;">
+            <div id="markdown-status" style="font-size: 11px; margin-top: 5px; color: #666;"></div>
+            
+            <div id="search-interface" class="search-interface">
+                <textarea id="search-query" placeholder="Paste or type text to search in PDF..."></textarea>
+                <button onclick="searchInPDF()" style="width: 100%;">🔍 Find in PDF</button>
+                <div id="search-results" class="search-results"></div>
+            </div>
+        </div>
+        
+        <!-- Export Section -->
+        <div class="export-section">
+            <h4>Export Options</h4>
+            <div class="export-buttons">
+                <button onclick="exportJSON()" style="background: #4CAF50; color: white;">📄 JSON</button>
+                <button onclick="exportCSV()" style="background: #2196F3; color: white;">📊 CSV</button>
+                <button onclick="exportAudit()" style="background: #FF9800; color: white;">📋 Audit</button>
+                <button onclick="exportAnnotatedPDF()" style="background: #9C27B0; color: white;">📑 PDF</button>
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div style="background: #f5f5f5; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                <span>Total Extractions:</span>
+                <strong id="extraction-count">0</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 13px;">
+                <span>Pages with Data:</span>
+                <strong id="pages-with-data">0</strong>
+            </div>
+        </div>
+        
+        <!-- Trace Log Entries -->
+        <div id="trace-log"></div>
+    </div>
+</div>
+
+<!-- Status Message -->
+<div id="extraction-status" class="extraction-status">
+    <span id="status-message"></span>
+</div>
+
+<script>
+// Initialize PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// Global Application State
+const AppState = {
+    pdfDoc: null,
+    currentPage: 1,
+    totalPages: 0,
+    scale: 1.0,
+    activeField: null,
+    activeFieldElement: null,
+    documentName: '',
+    extractions: [],
+    currentStep: 0,
+    totalSteps: 8,
+    markdownContent: '',
+    markdownLoaded: false,
+    pdfTextCache: new Map(),
+    searchMarkers: []
+};
+
+// Extraction Tracking System
+class ExtractionTracker {
+    constructor() {
+        this.extractions = [];
+        this.fieldMap = new Map();
+        this.loadFromLocalStorage();
+    }
+    
+    addExtraction(data) {
+        const extraction = {
+            id: `ext_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            timestamp: new Date().toISOString(),
+            ...data
+        };
+        
+        this.extractions.push(extraction);
+        this.fieldMap.set(data.fieldName, extraction);
+        
+        this.updateTraceLog(extraction);
+        this.updateStats();
+        this.saveToLocalStorage();
+        
+        return extraction;
+    }
+    
+    updateTraceLog(extraction) {
+        const logContainer = document.getElementById('trace-log');
+        
+        const entry = document.createElement('div');
+        entry.className = 'trace-entry';
+        entry.dataset.extractionId = extraction.id;
+        
+        const truncatedText = extraction.text.length > 80 
+            ? extraction.text.substring(0, 80) + '...' 
+            : extraction.text;
+        
+        entry.innerHTML = `
+            <span class="field-label">${extraction.fieldName}</span>
+            <span class="extracted-text">"${truncatedText}"</span>
+            <div class="metadata">
+                Page ${extraction.page} | ${extraction.method} | ${new Date(extraction.timestamp).toLocaleTimeString()}
+            </div>
+        `;
+        
+        entry.addEventListener('click', () => this.navigateToExtraction(extraction));
+        logContainer.insertBefore(entry, logContainer.firstChild);
+    }
+    
+    navigateToExtraction(extraction) {
+        if (extraction.page !== AppState.currentPage) {
+            renderPage(extraction.page);
+        }
+        
+        setTimeout(() => {
+            const marker = document.querySelector(`[data-extraction-id="${extraction.id}"]`);
+            if (marker) {
+                marker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                marker.style.background = 'rgba(255, 193, 7, 0.5)';
+                setTimeout(() => {
+                    marker.style.background = 'rgba(76, 175, 80, 0.15)';
+                }, 1000);
+            }
+        }, 500);
+    }
+    
+    updateStats() {
+        document.getElementById('extraction-count').textContent = this.extractions.length;
+        const uniquePages = new Set(this.extractions.map(e => e.page));
+        document.getElementById('pages-with-data').textContent = uniquePages.size;
+    }
+    
+    saveToLocalStorage() {
+        localStorage.setItem('clinical_extractions', JSON.stringify(this.extractions));
+    }
+    
+    loadFromLocalStorage() {
+        const saved = localStorage.getItem('clinical_extractions');
+        if (saved) {
+            try {
+                this.extractions = JSON.parse(saved);
+                this.extractions.forEach(ext => {
+                    this.fieldMap.set(ext.fieldName, ext);
+                    this.updateTraceLog(ext);
+                });
+                this.updateStats();
+            } catch (e) {
+                console.error('Failed to load saved extractions:', e);
+            }
+        }
+    }
+}
+
+const tracker = new ExtractionTracker();
+
+// Markdown Handling
+document.getElementById('markdown-file').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        try {
+            const text = await file.text();
+            AppState.markdownContent = text;
+            AppState.markdownLoaded = true;
+            document.getElementById('markdown-status').textContent = `✓ Loaded: ${file.name}`;
+            document.getElementById('markdown-status').style.color = '#4CAF50';
+            showStatus('Markdown file loaded successfully', 'success');
+        } catch (error) {
+            showStatus('Failed to load markdown file', 'error');
+            console.error(error);
+        }
+    }
+});
+
+function toggleSearchInterface() {
+    const searchInterface = document.getElementById('search-interface');
+    searchInterface.classList.toggle('active');
+}
+
+// Text Search and Highlighting
+function normalizeText(text) {
+    return text
+        .replace(/\s+/g, ' ')
+        .replace(/[\n\r]/g, ' ')
+        .replace(/[""]/g, '"')
+        .replace(/['']/g, "'")
+        .trim()
+        .toLowerCase();
+}
+
+async function searchInPDF() {
+    const query = document.getElementById('search-query').value.trim();
+    if (!query) {
+        showStatus('Please enter text to search', 'warning');
+        return;
+    }
+    
+    if (!AppState.pdfDoc) {
+        showStatus('Please load a PDF first', 'warning');
+        return;
+    }
+    
+    showStatus('Searching across all pages...', 'info');
+    clearSearchMarkers();
+    
+    const results = [];
+    const normalizedQuery = normalizeText(query);
+    const minMatchLength = Math.min(normalizedQuery.length, 20);
+    
+    for (let pageNum = 1; pageNum <= AppState.totalPages; pageNum++) {
+        const pageText = await getPageText(pageNum);
+        const normalizedPageText = normalizeText(pageText.fullText);
+        
+        let index = normalizedPageText.indexOf(normalizedQuery);
+        
+        if (index === -1 && normalizedQuery.length > minMatchLength) {
+            const queryWords = normalizedQuery.split(' ').filter(w => w.length > 3);
+            for (const word of queryWords) {
+                if (normalizedPageText.includes(word)) {
+                    index = normalizedPageText.indexOf(word);
+                    break;
+                }
+            }
+        }
+        
+        if (index !== -1) {
+            const contextStart = Math.max(0, index - 50);
+            const contextEnd = Math.min(normalizedPageText.length, index + normalizedQuery.length + 50);
+            const context = pageText.fullText.substring(contextStart, contextEnd);
+            
+            results.push({
+                page: pageNum,
+                context: context,
+                textItems: pageText.items
+            });
+        }
+    }
+    
+    displaySearchResults(results, query);
+    
+    if (results.length > 0) {
+        showStatus(`Found ${results.length} match(es)`, 'success');
+        renderPage(results[0].page).then(() => {
+            highlightSearchResult(results[0], query);
+        });
+    } else {
+        showStatus('No matches found', 'warning');
+    }
+}
+
+async function getPageText(pageNum) {
+    if (AppState.pdfTextCache.has(pageNum)) {
+        return AppState.pdfTextCache.get(pageNum);
+    }
+    
+    const page = await AppState.pdfDoc.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    
+    let fullText = '';
+    const items = [];
+    
+    textContent.items.forEach(item => {
+        fullText += item.str + ' ';
+        items.push({
+            text: item.str,
+            transform: item.transform
+        });
+    });
+    
+    const pageData = { fullText, items };
+    AppState.pdfTextCache.set(pageNum, pageData);
+    return pageData;
+}
+
+function highlightSearchResult(result, query) {
+    const normalizedQuery = normalizeText(query);
+    const textLayer = document.querySelector('.textLayer');
+    if (!textLayer) return;
+    
+    const spans = textLayer.querySelectorAll('span');
+    let accumulatedText = '';
+    let startSpan = null;
+    let matchingSpans = [];
+    
+    spans.forEach((span, i) => {
+        const spanText = span.textContent;
+        accumulatedText += spanText + ' ';
+        const normalizedAccum = normalizeText(accumulatedText);
+        
+        if (normalizedAccum.includes(normalizedQuery) && !startSpan) {
+            const matchIndex = normalizedAccum.indexOf(normalizedQuery);
+            let charCount = 0;
+            
+            for (let j = 0; j <= i; j++) {
+                const currentSpan = spans[j];
+                const currentText = currentSpan.textContent;
+                
+                if (charCount + currentText.length >= matchIndex) {
+                    startSpan = currentSpan;
+                    matchingSpans = [currentSpan];
+                    break;
+                }
+                charCount += currentText.length + 1;
+            }
+            
+            let matchCharCount = startSpan.textContent.length;
+            for (let j = i + 1; j < spans.length && matchCharCount < normalizedQuery.length; j++) {
+                matchingSpans.push(spans[j]);
+                matchCharCount += spans[j].textContent.length + 1;
+            }
+        }
+    });
+    
+    if (matchingSpans.length > 0) {
+        matchingSpans.forEach(span => {
+            span.classList.add('search-highlight');
+        });
+        
+        const bounds = calculateBoundingBox(matchingSpans.map(span => ({
+            x: parseFloat(span.dataset.x || 0),
+            y: parseFloat(span.dataset.y || 0),
+            width: parseFloat(span.dataset.width || 0),
+            height: parseFloat(span.dataset.height || 0)
+        })));
+        
+        addSearchMarker(bounds, result.page);
+    }
+}
+
+function calculateBoundingBox(items) {
+    let minX = Infinity, minY = Infinity;
+    let maxX = -Infinity, maxY = -Infinity;
+    
+    items.forEach(item => {
+        minX = Math.min(minX, item.x);
+        minY = Math.min(minY, item.y);
+        maxX = Math.max(maxX, item.x + item.width);
+        maxY = Math.max(maxY, item.y + item.height);
+    });
+    
+    return {
+        x: Math.round(minX),
+        y: Math.round(minY),
+        width: Math.round(maxX - minX),
+        height: Math.round(maxY - minY)
+    };
+}
+
+function addSearchMarker(coords, pageNum) {
+    const pageDiv = document.querySelector('.pdf-page');
+    if (!pageDiv) return;
+    
+    const marker = document.createElement('div');
+    marker.className = 'search-marker';
+    marker.style.left = coords.x + 'px';
+    marker.style.top = coords.y + 'px';
+    marker.style.width = coords.width + 'px';
+    marker.style.height = coords.height + 'px';
+    
+    marker.addEventListener('click', () => {
+        if (AppState.activeField && AppState.activeFieldElement) {
+            const textLayer = document.querySelector('.textLayer');
+            const highlightedSpans = textLayer.querySelectorAll('.search-highlight');
+            const text = Array.from(highlightedSpans).map(s => s.textContent).join(' ');
+            
+            const extraction = tracker.addExtraction({
+                fieldName: AppState.activeField,
+                text: text,
+                page: pageNum,
+                coordinates: coords,
+                method: 'markdown-search',
+                documentName: AppState.documentName
+            });
+            
+            AppState.activeFieldElement.value = text;
+            AppState.activeFieldElement.classList.add('has-extraction');
+            
+            showStatus(`Extracted to ${AppState.activeField}`, 'success');
+        }
+    });
+    
+    pageDiv.appendChild(marker);
+    AppState.searchMarkers.push(marker);
+}
+
+function clearSearchMarkers() {
+    AppState.searchMarkers.forEach(marker => marker.remove());
+    AppState.searchMarkers = [];
+    
+    document.querySelectorAll('.search-highlight').forEach(el => {
+        el.classList.remove('search-highlight');
+    });
+}
+
+function displaySearchResults(results, query) {
+    const resultsContainer = document.getElementById('search-results');
+    resultsContainer.innerHTML = '';
+    
+    if (results.length === 0) {
+        resultsContainer.innerHTML = '<div style="padding: 10px; color: #666;">No matches found</div>';
+        return;
+    }
+    
+    results.forEach((result, index) => {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        item.innerHTML = `
+            <strong>Page ${result.page}</strong><br>
+            <span style="font-style: italic;">"...${result.context}..."</span>
+        `;
+        item.addEventListener('click', () => {
+            renderPage(result.page).then(() => {
+                highlightSearchResult(result, query);
+            });
+        });
+        resultsContainer.appendChild(item);
+    });
+}
+
+// PDF Loading and Rendering
+async function loadPDF(file) {
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        
+        AppState.pdfDoc = await pdfjsLib.getDocument({
+            data: arrayBuffer,
+            cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+            cMapPacked: true
+        }).promise;
+        
+        AppState.totalPages = AppState.pdfDoc.numPages;
+        AppState.documentName = file.name;
+        AppState.pdfTextCache.clear();
+        
+        document.getElementById('total-pages').textContent = AppState.totalPages;
+        document.getElementById('upload-area').style.display = 'none';
+        document.getElementById('pdf-pages').style.display = 'block';
+        
+        await renderPage(1);
+        showStatus('PDF loaded successfully', 'success');
+    } catch (error) {
+        console.error('Error loading PDF:', error);
+        showStatus('Failed to load PDF', 'error');
+    }
+}
+
+async function renderPage(pageNum) {
+    if (!AppState.pdfDoc) return;
+    
+    const page = await AppState.pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale: AppState.scale });
+    
+    const container = document.getElementById('pdf-pages');
+    container.innerHTML = '';
+    
+    const pageDiv = document.createElement('div');
+    pageDiv.className = 'pdf-page';
+    pageDiv.style.width = viewport.width + 'px';
+    pageDiv.style.height = viewport.height + 'px';
+    
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    await page.render({
+        canvasContext: context,
+        viewport: viewport
+    }).promise;
+    
+    pageDiv.appendChild(canvas);
+    
+    const textContent = await page.getTextContent();
+    const textLayer = document.createElement('div');
+    textLayer.className = 'textLayer';
+    
+    const textItems = [];
+    textContent.items.forEach((item) => {
+        if (!item.str.trim()) return;
+        
+        const span = document.createElement('span');
+        span.textContent = item.str;
+        
+        const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+        span.style.left = tx[4] + 'px';
+        span.style.top = tx[5] + 'px';
+        span.style.fontSize = Math.sqrt((tx[0] * tx[0]) + (tx[1] * tx[1])) + 'px';
+        
+        span.dataset.x = tx[4];
+        span.dataset.y = tx[5];
+        span.dataset.width = item.width * AppState.scale;
+        span.dataset.height = item.height * AppState.scale;
+        
+        textLayer.appendChild(span);
+        textItems.push({
+            element: span,
+            x: tx[4],
+            y: tx[5],
+            width: item.width * AppState.scale,
+            height: item.height * AppState.scale,
+            text: item.str
+        });
+    });
+    
+    pageDiv.appendChild(textLayer);
+    
+    enableTextSelection(textLayer, textItems, pageNum);
+    
+    addExtractionMarkers(pageDiv, pageNum);
+    
+    container.appendChild(pageDiv);
+    
+    AppState.currentPage = pageNum;
+    document.getElementById('page-num').value = pageNum;
+    
+    clearSearchMarkers();
+}
+
+function enableTextSelection(textLayer, textItems, pageNum) {
+    let isSelecting = false;
+    let startItem = null;
+    let selectedItems = [];
+    
+    textLayer.addEventListener('mousedown', (e) => {
+        if (!AppState.activeField) {
+            showStatus('Please select a form field first', 'warning');
+            return;
+        }
+        
+        isSelecting = true;
+        startItem = textItems.find(item => item.element === e.target);
+        selectedItems = [startItem];
+        
+        textLayer.classList.add('active-selection');
+        textLayer.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+    });
+    
+    textLayer.addEventListener('mousemove', (e) => {
+        if (!isSelecting || !AppState.activeField) return;
+        
+        const currentItem = textItems.find(item => item.element === e.target);
+        if (currentItem) {
+            const startIndex = textItems.indexOf(startItem);
+            const endIndex = textItems.indexOf(currentItem);
+            
+            selectedItems = textItems.slice(
+                Math.min(startIndex, endIndex),
+                Math.max(startIndex, endIndex) + 1
+            );
+            
+            textItems.forEach(item => item.element.classList.remove('highlight'));
+            selectedItems.forEach(item => item.element.classList.add('highlight'));
+        }
+    });
+    
+    textLayer.addEventListener('mouseup', () => {
+        if (!isSelecting || !AppState.activeField) return;
+        
+        isSelecting = false;
+        textLayer.classList.remove('active-selection');
+        
+        if (selectedItems.length > 0) {
+            const extractedText = selectedItems.map(item => item.text).join(' ').trim();
+            const bounds = calculateBoundingBox(selectedItems);
+            
+            const extraction = tracker.addExtraction({
+                fieldName: AppState.activeField,
+                text: extractedText,
+                page: pageNum,
+                coordinates: bounds,
+                method: 'manual',
+                documentName: AppState.documentName
+            });
+            
+            if (AppState.activeFieldElement) {
+                if (AppState.activeFieldElement.type === 'number') {
+                    const match = extractedText.match(/-?\d+(\.\d+)?/);
+                    if (match) {
+                        AppState.activeFieldElement.value = match[0];
+                    }
+                } else {
+                    AppState.activeFieldElement.value = extractedText;
+                }
+                AppState.activeFieldElement.classList.add('has-extraction');
+            }
+            
+            selectedItems.forEach(item => {
+                item.element.classList.remove('highlight');
+                item.element.classList.add('extracted');
+            });
+            
+            addExtractionMarker(extraction, pageNum);
+            showStatus(`Extracted to ${AppState.activeField}`, 'success');
+            autoAdvanceField();
+        }
+    });
+}
+
+function addExtractionMarker(extraction, pageNum) {
+    const pageDiv = document.querySelector('.pdf-page');
+    if (!pageDiv) return;
+    
+    const marker = document.createElement('div');
+    marker.className = 'extraction-marker';
+    marker.dataset.extractionId = extraction.id;
+    marker.dataset.field = extraction.fieldName;
+    
+    marker.style.left = extraction.coordinates.x + 'px';
+    marker.style.top = extraction.coordinates.y + 'px';
+    marker.style.width = extraction.coordinates.width + 'px';
+    marker.style.height = extraction.coordinates.height + 'px';
+    
+    pageDiv.appendChild(marker);
+}
+
+function addExtractionMarkers(pageDiv, pageNum) {
+    tracker.extractions
+        .filter(ext => ext.page === pageNum)
+        .forEach(ext => {
+            const marker = document.createElement('div');
+            marker.className = 'extraction-marker';
+            marker.dataset.extractionId = ext.id;
+            marker.dataset.field = ext.fieldName;
+            
+            marker.style.left = ext.coordinates.x + 'px';
+            marker.style.top = ext.coordinates.y + 'px';
+            marker.style.width = ext.coordinates.width + 'px';
+            marker.style.height = ext.coordinates.height + 'px';
+            
+            pageDiv.appendChild(marker);
+        });
+}
+
+// Form Field Management
+function initializeFormFields() {
+    const inputs = document.querySelectorAll('.linked-input');
+    inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+            document.querySelectorAll('.form-group').forEach(g => {
+                g.classList.remove('active-extraction');
+            });
+            
+            AppState.activeField = input.name || input.id;
+            AppState.activeFieldElement = input;
+            
+            input.parentElement.classList.add('active-extraction');
+            
+            document.getElementById('active-field-indicator').textContent = 
+                `Extracting: ${AppState.activeField}`;
+            document.getElementById('active-field-indicator').style.background = '#4CAF50';
+        });
+    });
+}
+
+function autoAdvanceField() {
+    const currentStep = document.querySelector('.step.active');
+    const inputs = currentStep.querySelectorAll('.linked-input:not([disabled])');
+    const currentIndex = Array.from(inputs).indexOf(AppState.activeFieldElement);
+    
+    if (currentIndex < inputs.length - 1) {
+        inputs[currentIndex + 1].focus();
+    }
+}
+
+// Dynamic Field Functions
+function removeElement(button) {
+    button.parentElement.remove();
+    updateArmSelectors();
+}
+
+let indicationCount = 0;
+function addIndication() {
+    const container = document.getElementById('indications-container');
+    const div = document.createElement('div');
+    div.className = 'dynamic-container';
+    div.innerHTML = `
+        <h4>Indication</h4>
+        <div class="grid-2col">
+            <div class="form-group">
+                <label>Sign/Symptom</label>
+                <select name="indication_sign_${indicationCount}" class="linked-input">
+                    <option value="">Select...</option>
+                    <option value="Drowsiness">Drowsiness</option>
+                    <option value="GCS_Drop">Drop in GCS</option>
+                    <option value="Imaging_Mass_Effect">Imaging signs of mass effect</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Count (N)</label>
+                <input type="number" name="indication_count_${indicationCount}" class="linked-input">
+            </div>
+        </div>
+        <button type="button" class="remove-btn" onclick="removeElement(this)">Remove</button>
+    `;
+    container.appendChild(div);
+    initializeFormFields();
+    indicationCount++;
+}
+
+let interventionCount = 0;
+function addIntervention() {
+    const container = document.getElementById('interventions-container');
+    const div = document.createElement('div');
+    div.className = 'dynamic-container';
+    div.innerHTML = `
+        <h4>Intervention Type</h4>
+        <div class="form-group">
+            <label>Surgical Type</label>
+            <select name="intervention_type_${interventionCount}" class="linked-input">
+                <option value="">Select...</option>
+                <option value="SDC_EVD">SDC + EVD</option>
+                <option value="SDC_ALONE">SDC Alone</option>
+                <option value="EVD_ALONE">EVD Alone</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Time To Surgery (Hours)</label>
+            <input type="number" step="0.1" name="intervention_time_${interventionCount}" class="linked-input">
+        </div>
+        <div class="form-group">
+            <label>Duraplasty?</label>
+            <select name="intervention_duraplasty_${interventionCount}" class="linked-input">
+                <option value="null">Unknown</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>
+        </div>
+        <button type="button" class="remove-btn" onclick="removeElement(this)">Remove</button>
+    `;
+    container.appendChild(div);
+    initializeFormFields();
+    interventionCount++;
+}
+
+let armCount = 0;
+function addArm() {
+    const container = document.getElementById('arms-container');
+    const div = document.createElement('div');
+    div.className = 'dynamic-container arm-definition';
+    div.innerHTML = `
+        <h3>Study Arm</h3>
+        <div class="grid-2col">
+            <div class="form-group">
+                <label>Label</label>
+                <input type="text" name="arm_label_${armCount}" class="linked-input arm-label-input" oninput="updateArmSelectors()">
+            </div>
+            <div class="form-group">
+                <label>Sample Size (N)</label>
+                <input type="number" name="arm_n_${armCount}" class="linked-input">
+            </div>
+        </div>
+        <button type="button" class="remove-btn" onclick="removeElement(this)">Remove</button>
+    `;
+    container.appendChild(div);
+    updateArmSelectors();
+    initializeFormFields();
+    armCount++;
+}
+
+function updateArmSelectors() {
+    const armLabels = Array.from(document.querySelectorAll('.arm-label-input')).map(input => input.value).filter(Boolean);
+    document.querySelectorAll('.arm-selector').forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Select Arm...</option>';
+        armLabels.forEach(label => {
+            select.add(new Option(label, label));
+        });
+        if (armLabels.includes(currentValue)) {
+            select.value = currentValue;
+        }
+    });
+}
+
+let mortalityCount = 0;
+function addMortality() {
+    const container = document.getElementById('mortality-global-container');
+    const div = document.createElement('div');
+    div.className = 'dynamic-container';
+    div.innerHTML = `
+        <h4>Mortality Data Point</h4>
+        <div class="grid-2col">
+            <div class="form-group">
+                <label>Arm</label>
+                <select name="mortality_arm_${mortalityCount}" class="arm-selector"></select>
+            </div>
+            <div class="form-group">
+                <label>Timepoint</label>
+                <input type="text" name="mortality_tp_${mortalityCount}" class="linked-input">
+            </div>
+        </div>
+        <div class="grid-2col">
+            <div class="form-group">
+                <label>Deaths (N)</label>
+                <input type="number" name="mortality_deaths_${mortalityCount}" class="linked-input">
+            </div>
+            <div class="form-group">
+                <label>Total (N)</label>
+                <input type="number" name="mortality_total_${mortalityCount}" class="linked-input">
+            </div>
+        </div>
+        <button type="button" class="remove-btn" onclick="removeElement(this)">Remove</button>
+    `;
+    container.appendChild(div);
+    updateArmSelectors();
+    initializeFormFields();
+    mortalityCount++;
+}
+
+let mrsCount = 0;
+function addMRS() {
+    const container = document.getElementById('mrs-global-container');
+    const div = document.createElement('div');
+    div.className = 'dynamic-container';
+    div.innerHTML = `
+        <h4>mRS Data Point</h4>
+        <div class="grid-2col">
+            <div class="form-group">
+                <label>Arm</label>
+                <select name="mrs_arm_${mrsCount}" class="arm-selector"></select>
+            </div>
+            <div class="form-group">
+                <label>Timepoint</label>
+                <input type="text" name="mrs_tp_${mrsCount}" class="linked-input">
+            </div>
+        </div>
+        <h5>Distribution (Counts)</h5>
+        <div class="grid-mrs">
+            ${[0,1,2,3,4,5,6].map(i => `
+                <div class="form-group">
+                    <label>${i}</label>
+                    <input type="number" name="mrs_${i}_${mrsCount}" class="linked-input">
+                </div>
+            `).join('')}
+        </div>
+        <button type="button" class="remove-btn" onclick="removeElement(this)">Remove</button>
+    `;
+    container.appendChild(div);
+    updateArmSelectors();
+    initializeFormFields();
+    mrsCount++;
+}
+
+let complicationCount = 0;
+function addComplication() {
+    const container = document.getElementById('complications-container');
+    const div = document.createElement('div');
+    div.className = 'dynamic-container';
+    div.innerHTML = `
+        <h4>Complication</h4>
+        <div class="grid-2col">
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" name="comp_desc_${complicationCount}" class="linked-input">
+            </div>
+            <div class="form-group">
+                <label>Arm</label>
+                <select name="comp_arm_${complicationCount}" class="arm-selector"></select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Count (N)</label>
+            <input type="number" name="comp_count_${complicationCount}" class="linked-input">
+        </div>
+        <button type="button" class="remove-btn" onclick="removeElement(this)">Remove</button>
+    `;
+    container.appendChild(div);
+    updateArmSelectors();
+    initializeFormFields();
+    complicationCount++;
+}
+
+let predictorCount = 0;
+function addPredictor() {
+    const container = document.getElementById('predictors-container');
+    const div = document.createElement('div');
+    div.className = 'dynamic-container';
+    div.innerHTML = `
+        <h4>Predictor Analysis</h4>
+        <div class="form-group">
+            <label>Predictor Variable</label>
+            <input type="text" name="pred_var_${predictorCount}" class="linked-input">
+        </div>
+        <div class="grid-3col">
+            <div class="form-group">
+                <label>Effect Size (OR/HR)</label>
+                <input type="number" step="0.01" name="pred_effect_${predictorCount}" class="linked-input">
+            </div>
+            <div class="form-group">
+                <label>95% CI (Lower)</label>
+                <input type="number" step="0.01" name="pred_ci_lower_${predictorCount}" class="linked-input">
+            </div>
+            <div class="form-group">
+                <label>95% CI (Upper)</label>
+                <input type="number" step="0.01" name="pred_ci_upper_${predictorCount}" class="linked-input">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>p-Value</label>
+            <input type="number" step="0.001" name="pred_pvalue_${predictorCount}" class="linked-input">
+        </div>
+        <button type="button" class="remove-btn" onclick="removeElement(this)">Remove</button>
+    `;
+    container.appendChild(div);
+    initializeFormFields();
+    predictorCount++;
+}
+
+// Navigation
+const steps = document.querySelectorAll('.step');
+const prevBtn = document.getElementById('prev-btn');
+const nextBtn = document.getElementById('next-btn');
+const submitBtn = document.getElementById('submit-btn');
+const stepIndicator = document.getElementById('step-indicator');
+const progressBar = document.getElementById('progress-bar');
+
+function updateProgress() {
+    const progress = ((AppState.currentStep + 1) / AppState.totalSteps) * 100;
+    progressBar.style.width = progress + '%';
+}
+
+function showStep(stepIndex) {
+    steps.forEach((step, index) => {
+        step.classList.toggle('active', index === stepIndex);
+    });
+    
+    prevBtn.disabled = (stepIndex === 0);
+    stepIndicator.textContent = `Step ${stepIndex + 1} of ${AppState.totalSteps}`;
+    
+    const isLastStep = stepIndex === AppState.totalSteps - 1;
+    nextBtn.style.display = isLastStep ? 'none' : 'inline-block';
+    submitBtn.style.display = isLastStep ? 'inline-block' : 'none';
+    
+    document.querySelector('.form-panel').scrollTop = 0;
+    updateProgress();
+    
+    if (stepIndex >= 6) updateArmSelectors();
+    
+    initializeFormFields();
+}
+
+nextBtn.addEventListener('click', () => {
+    const currentStepElement = steps[AppState.currentStep];
+    const requiredInputs = currentStepElement.querySelectorAll('[required]');
+    let isValid = true;
+    
+    requiredInputs.forEach(input => {
+        if (!input.value) {
+            isValid = false;
+            input.style.borderColor = 'red';
+        } else {
+            input.style.borderColor = '';
+        }
+    });
+    
+    if (!isValid) {
+        showStatus('Please fill required fields', 'warning');
+        return;
+    }
+    
+    if (AppState.currentStep === 1 && document.getElementById('inclusion-met').value === "false") {
+        if (confirm("Study does not meet inclusion criteria. Stop extraction?")) {
+            return;
+        }
+    }
+    
+    if (AppState.currentStep < AppState.totalSteps - 1) {
+        AppState.currentStep++;
+        showStep(AppState.currentStep);
+    }
+});
+
+prevBtn.addEventListener('click', () => {
+    if (AppState.currentStep > 0) {
+        AppState.currentStep--;
+        showStep(AppState.currentStep);
+    }
+});
+
+submitBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const formData = collectFormData();
+    console.log('Final Extraction Data:', formData);
+    console.log('Extraction Trace:', tracker.extractions);
+    showStatus('Extraction complete! Data saved.', 'success');
+});
+
+// PDF Controls
+document.getElementById('pdf-upload-btn').addEventListener('click', () => {
+    document.getElementById('pdf-file').click();
+});
+
+document.getElementById('pdf-file').addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+        loadPDF(e.target.files[0]);
+    }
+});
+
+document.getElementById('pdf-file-2').addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+        loadPDF(e.target.files[0]);
+    }
+});
+
+document.getElementById('pdf-prev-page').addEventListener('click', () => {
+    if (AppState.currentPage > 1) {
+        renderPage(AppState.currentPage - 1);
+    }
+});
+
+document.getElementById('pdf-next-page').addEventListener('click', () => {
+    if (AppState.currentPage < AppState.totalPages) {
+        renderPage(AppState.currentPage + 1);
+    }
+});
+
+document.getElementById('page-num').addEventListener('change', (e) => {
+    const pageNum = parseInt(e.target.value);
+    if (pageNum >= 1 && pageNum <= AppState.totalPages) {
+        renderPage(pageNum);
+    }
+});
+
+document.getElementById('zoom-level').addEventListener('change', (e) => {
+    AppState.scale = parseFloat(e.target.value);
+    renderPage(AppState.currentPage);
+});
+
+document.getElementById('fit-width').addEventListener('click', () => {
+    const container = document.getElementById('pdf-container');
+    const containerWidth = container.clientWidth - 40;
+    
+    AppState.pdfDoc.getPage(AppState.currentPage).then(page => {
+        const viewport = page.getViewport({ scale: 1.0 });
+        AppState.scale = containerWidth / viewport.width;
+        document.getElementById('zoom-level').value = AppState.scale.toFixed(2);
+        renderPage(AppState.currentPage);
+    });
+});
+
+// Drag and Drop
+const uploadArea = document.getElementById('upload-area');
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.style.background = '#e3f2fd';
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.style.background = '';
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.style.background = '';
+    
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+        loadPDF(file);
+    }
+});
+
+// Utility Functions
+function showStatus(message, type = 'info') {
+    const statusDiv = document.getElementById('extraction-status');
+    const messageSpan = document.getElementById('status-message');
+    
+    messageSpan.textContent = message;
+    statusDiv.className = 'extraction-status show';
+    
+    const colors = {
+        success: '#4CAF50',
+        warning: '#FF9800',
+        error: '#f44336',
+        info: '#2196F3'
+    };
+    
+    statusDiv.style.background = colors[type] || colors.info;
+    statusDiv.style.color = 'white';
+    
+    setTimeout(() => {
+        statusDiv.classList.remove('show');
+    }, 3000);
+}
+
+function collectFormData() {
+    const formData = {};
+    const inputs = document.querySelectorAll('#extraction-form input, #extraction-form textarea, #extraction-form select');
+    inputs.forEach(input => {
+        if (input.value) {
+            formData[input.name || input.id] = input.value;
+        }
+    });
+    return formData;
+}
+
+// Export Functions
+function exportJSON() {
+    const exportData = {
+        document: AppState.documentName,
+        exportDate: new Date().toISOString(),
+        formData: collectFormData(),
+        extractions: tracker.extractions
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    downloadFile(blob, `extraction_${Date.now()}.json`);
+}
+
+function exportCSV() {
+    let csv = 'Field,Text,Page,X,Y,Width,Height,Timestamp\n';
+    
+    tracker.extractions.forEach(ext => {
+        csv += `"${ext.fieldName}","${ext.text.replace(/"/g, '""')}",${ext.page},`;
+        csv += `${ext.coordinates.x},${ext.coordinates.y},${ext.coordinates.width},${ext.coordinates.height},`;
+        csv += `"${ext.timestamp}"\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    downloadFile(blob, `extraction_${Date.now()}.csv`);
+}
+
+function exportAudit() {
+    const formData = collectFormData();
+    const html = generateAuditHTML(formData);
+    const blob = new Blob([html], { type: 'text/html' });
+    window.open(URL.createObjectURL(blob), '_blank');
+}
+
+function generateAuditHTML(formData) {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Clinical Extraction Audit Report</title>
+        <style>
+            body { font-family: Arial; max-width: 1200px; margin: 0 auto; padding: 20px; }
+            h1 { color: #1976D2; border-bottom: 2px solid #1976D2; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th { background: #f5f5f5; padding: 10px; text-align: left; border: 1px solid #ddd; }
+            td { padding: 10px; border: 1px solid #ddd; }
+            .extraction { background: #f9f9f9; padding: 15px; margin: 15px 0; border-radius: 5px; }
+            .coordinates { font-family: monospace; background: #fff; padding: 5px; }
+        </style>
+    </head>
+    <body>
+        <h1>Clinical Study Extraction Audit Report</h1>
+        
+        <h2>Document Information</h2>
+        <table>
+            <tr><th>Document Name</th><td>${AppState.documentName || 'N/A'}</td></tr>
+            <tr><th>Total Pages</th><td>${AppState.totalPages}</td></tr>
+            <tr><th>Total Extractions</th><td>${tracker.extractions.length}</td></tr>
+            <tr><th>Report Generated</th><td>${new Date().toLocaleString()}</td></tr>
+        </table>
+        
+        <h2>Extracted Form Data</h2>
+        <table>
+            <tr><th>Field</th><th>Value</th></tr>
+            ${Object.entries(formData).map(([key, value]) => 
+                `<tr><td>${key}</td><td>${value}</td></tr>`
+            ).join('')}
+        </table>
+        
+        <h2>Extraction Details with Coordinates</h2>
+        ${tracker.extractions.map((ext, i) => `
+            <div class="extraction">
+                <h3>${i + 1}. ${ext.fieldName}</h3>
+                <p><strong>Extracted Text:</strong> "${ext.text}"</p>
+                <p><strong>Page:</strong> ${ext.page}</p>
+                <p><strong>Coordinates:</strong> 
+                    <span class="coordinates">X: ${ext.coordinates.x}, Y: ${ext.coordinates.y}, 
+                    Width: ${ext.coordinates.width}px, Height: ${ext.coordinates.height}px</span>
+                </p>
+                <p><strong>Timestamp:</strong> ${new Date(ext.timestamp).toLocaleString()}</p>
+            </div>
+        `).join('')}
+        
+        <div style="margin-top: 50px; padding-top: 20px; border-top: 2px solid #ddd;">
+            <p><em>This audit report provides complete traceability for all extracted data. 
+            Each extraction includes precise coordinate information for verification against 
+            the source document.</em></p>
+        </div>
+    </body>
+    </html>
+    `;
+}
+
+function exportAnnotatedPDF() {
+    showStatus('Annotated PDF export requires additional libraries', 'info');
+}
+
+function downloadFile(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    initializeFormFields();
+    showStep(0);
+    updateProgress();
+    showStatus('Ready. Load a PDF and markdown file to begin.', 'info');
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'o') {
+        e.preventDefault();
+        document.getElementById('pdf-file').click();
+    }
+    
+    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        if (e.key === 'ArrowLeft' && AppState.currentPage > 1) {
+            renderPage(AppState.currentPage - 1);
+        } else if (e.key === 'ArrowRight' && AppState.currentPage < AppState.totalPages) {
+            renderPage(AppState.currentPage + 1);
+        }
+    }
+});
+</script>
+
+</body>
+</html>
