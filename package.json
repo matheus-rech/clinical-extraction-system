@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "convex": "^1.17.4",
-    "pdfjs-dist": "^4.2.67"
+    "pdfjs-dist": "^4.2.67",
+    "@supabase/supabase-js": "^2.46.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.1",

@@ -24,6 +24,7 @@ export interface AppState {
   searchMarkers: HTMLElement[];
   maxCacheSize: number;
   isProcessing: boolean;
+  lastSubmissionId: string | null;
 }
 
 type StateSubscriber = (state: Readonly<AppState>) => void;
@@ -54,7 +55,8 @@ class AppStateManager {
       pdfTextCache: new Map(),
       searchMarkers: [],
       maxCacheSize: 50,
-      isProcessing: false
+      isProcessing: false,
+      lastSubmissionId: null
     };
   }
 
