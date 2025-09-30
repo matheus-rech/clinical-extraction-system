@@ -6,6 +6,8 @@
 import AppStateManager from '@core/AppState';
 import { MemoryManager } from '@core/MemoryManager';
 import { StatusManager } from '@modules/ui/StatusManager';
+import { dataSyncService } from '@modules/data/DataSyncService';
+import { SupabaseConfigurationError } from '@config/supabase.config';
 import { FormValidator } from './FormValidator';
 import { DynamicFields } from './DynamicFields';
 
@@ -77,7 +79,9 @@ export class FormManager {
     }
 
     if (submitBtn) {
-      this.memoryManager.registerEventListener(submitBtn, 'click', (e) => this.handleSubmit(e));
+      this.memoryManager.registerEventListener(submitBtn, 'click', (e) => {
+        void this.handleSubmit(e);
+      });
     }
   }
 
@@ -171,16 +175,33 @@ export class FormManager {
     }
   }
 
-  private handleSubmit(e: Event): void {
+  private async handleSubmit(e: Event): Promise<void> {
     e.preventDefault();
-    
+
     const formData = this.collectFormData();
     const state = AppStateManager.getState();
-    
-    console.log('Final Extraction Data:', formData);
-    console.log('Extraction Trace:', state.extractions);
-    
-    StatusManager.show('Extraction complete! Data saved.', 'success');
+
+    try {
+      console.log('Final Extraction Data:', formData);
+      const submissionId = await dataSyncService.persistCurrentSession(formData);
+      console.log('Supabase submission id:', submissionId);
+      console.log('Extraction Trace:', state.extractions);
+
+      StatusManager.show(
+        submissionId
+          ? `Extraction complete! Saved to Supabase (ID: ${submissionId}).`
+          : 'Extraction complete! Supabase saved without ID response.',
+        'success'
+      );
+    } catch (error) {
+      console.error('Failed to persist extraction session', error);
+
+      if (error instanceof SupabaseConfigurationError) {
+        StatusManager.show('Extraction complete locally. Configure Supabase to sync data.', 'warning');
+      } else {
+        StatusManager.show('Extraction saved locally, but Supabase sync failed. Please export manually.', 'error');
+      }
+    }
   }
 
   private collectFormData(): Record<string, string> {
