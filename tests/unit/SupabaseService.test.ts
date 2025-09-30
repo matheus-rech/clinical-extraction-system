@@ -6,35 +6,23 @@ import { SupabaseConfigurationError } from '@config/supabase.config';
 import AppStateManager from '@core/AppState';
 import { dataSyncService } from '@modules/data/DataSyncService';
 
-const submissionResponse = { data: { id: 'submission-123' }, error: null };
+type RpcResponse = { data: string | null; error: { message: string; details?: string | null; hint?: string | null } | null };
 
-const createMockClient = () => {
-  const singleMock = vi.fn().mockResolvedValue(submissionResponse);
-  const selectMock = vi.fn(() => ({ single: singleMock }));
-  const insertSubmissionMock = vi.fn(() => ({ select: selectMock }));
+const defaultRpcResponse: RpcResponse = { data: 'submission-123', error: null };
 
-  const insertCoordinatesMock = vi.fn().mockResolvedValue({ error: null });
-
-  const fromMock = vi.fn((table: string) => {
-    if (table === 'form_submissions') {
-      return { insert: insertSubmissionMock } as unknown;
-    }
-    if (table === 'extraction_coordinates') {
-      return { insert: insertCoordinatesMock } as unknown;
-    }
-    throw new Error(`Unexpected table access: ${table}`);
-  });
+const createMockClient = (response: RpcResponse = defaultRpcResponse) => {
+  const rpcMock = vi.fn().mockResolvedValue(response);
+  const fromMock = vi.fn();
 
   const client = {
+    rpc: rpcMock,
     from: fromMock
-  } as const;
+  } as unknown as SupabaseClient;
 
   return {
     client,
     mocks: {
-      insertSubmissionMock,
-      insertCoordinatesMock,
-      singleMock
+      rpcMock
     }
   };
 };
@@ -49,12 +37,13 @@ describe('SupabaseService', () => {
     supabaseClientManager.setClientForTesting(null);
     delete process.env.VITE_SUPABASE_URL;
     delete process.env.VITE_SUPABASE_ANON_KEY;
+    AppStateManager.reset();
     vi.restoreAllMocks();
   });
 
-  it('saves form submissions and coordinates', async () => {
+  it('saves form submissions and coordinates through the transactional RPC', async () => {
     const { client, mocks } = createMockClient();
-    supabaseClientManager.setClientForTesting(client as unknown as SupabaseClient);
+    supabaseClientManager.setClientForTesting(client);
 
     const service = SupabaseService.getInstance();
 
@@ -79,27 +68,24 @@ describe('SupabaseService', () => {
     const submissionId = await service.saveExtractionSession(payload);
 
     expect(submissionId).toBe('submission-123');
-
-    expect(mocks.insertSubmissionMock).toHaveBeenCalledWith({
+    expect(mocks.rpcMock).toHaveBeenCalledWith('save_submission_with_coordinates', {
       document_name: 'Test Document',
-      total_pages: 12,
-      extraction_count: 1,
       form_payload: payload.formData,
-      metadata: null
+      total_pages: 12,
+      metadata: null,
+      coordinates: [
+        expect.objectContaining({
+          field_name: 'fieldA',
+          page: 2,
+          x: 10,
+          y: 20,
+          width: 100,
+          height: 30,
+          selection_method: 'manual',
+          document_name: 'Test Document'
+        })
+      ]
     });
-
-    expect(mocks.insertCoordinatesMock).toHaveBeenCalledWith([
-      expect.objectContaining({
-        submission_id: 'submission-123',
-        field_name: 'fieldA',
-        page: 2,
-        x: 10,
-        y: 20,
-        width: 100,
-        height: 30,
-        selection_method: 'manual'
-      })
-    ]);
   });
 
   it('throws when configuration is missing', async () => {
@@ -116,9 +102,30 @@ describe('SupabaseService', () => {
     })).rejects.toBeInstanceOf(SupabaseConfigurationError);
   });
 
+  it('surfaces RPC failures and avoids recording a submission id', async () => {
+    const rpcError = {
+      message: 'insert failed',
+      details: 'coordinate insert violated constraint',
+      hint: 'Check bounding box payload'
+    };
+    const { client } = createMockClient({ data: null, error: rpcError });
+    supabaseClientManager.setClientForTesting(client);
+
+    const service = SupabaseService.getInstance();
+
+    await expect(service.saveExtractionSession({
+      documentName: 'Doc',
+      formData: {},
+      extractions: [],
+      totalPages: 1
+    })).rejects.toThrow(
+      'Failed to persist submission: insert failed | coordinate insert violated constraint | Check bounding box payload'
+    );
+  });
+
   it('persists via DataSyncService and updates AppState', async () => {
     const { client } = createMockClient();
-    supabaseClientManager.setClientForTesting(client as unknown as SupabaseClient);
+    supabaseClientManager.setClientForTesting(client);
 
     AppStateManager.setState({
       documentName: 'Doc 1',
@@ -143,7 +150,26 @@ describe('SupabaseService', () => {
 
     const state = AppStateManager.getState();
     expect(state.lastSubmissionId).toBe('submission-123');
+  });
 
-    AppStateManager.reset();
+  it('does not update AppState when the RPC fails', async () => {
+    const rpcError = {
+      message: 'insert failed',
+      details: 'coordinate insert violated constraint',
+      hint: null
+    };
+    const { client } = createMockClient({ data: null, error: rpcError });
+    supabaseClientManager.setClientForTesting(client);
+
+    AppStateManager.setState({
+      documentName: 'Doc 2',
+      extractions: [],
+      totalPages: 3
+    });
+
+    await expect(dataSyncService.persistCurrentSession({})).rejects.toThrow('Failed to persist submission: insert failed | coordinate insert violated constraint');
+
+    const state = AppStateManager.getState();
+    expect(state.lastSubmissionId).toBeNull();
   });
 });

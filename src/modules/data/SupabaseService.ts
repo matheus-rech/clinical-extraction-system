@@ -61,26 +61,10 @@ export class SupabaseService {
 
     const client = supabaseClientManager.getClient();
 
-    const submissionInsert = {
-      document_name: payload.documentName,
-      total_pages: payload.totalPages || null,
-      extraction_count: payload.extractions.length,
-      form_payload: payload.formData,
-      metadata: payload.metadata ?? null
-    };
-
-    const { data: submissionData, error: submissionError } = await client
-      .from('form_submissions')
-      .insert(submissionInsert)
-      .select('id')
-      .single();
-
-    if (submissionError || !submissionData) {
-      throw new Error(`Failed to save form submission: ${submissionError?.message ?? 'Unknown error'}`);
-    }
-
-    const coordinateRows = payload.extractions.map(ext => ({
-      submission_id: submissionData.id,
+    // Persisting through a Postgres RPC keeps the submission and coordinate rows in the same
+    // transaction so a failure in either write path rolls everything back. This protects the
+    // downstream review tooling from referencing orphaned submissions.
+    const coordinatePayload = payload.extractions.map(ext => ({
       field_name: ext.fieldName,
       page: ext.page,
       text: ext.text,
@@ -92,17 +76,25 @@ export class SupabaseService {
       document_name: payload.documentName
     }));
 
-    if (coordinateRows.length > 0) {
-      const { error: coordinatesError } = await client
-        .from('extraction_coordinates')
-        .insert(coordinateRows);
+    const { data, error } = await client.rpc<string>('save_submission_with_coordinates', {
+      document_name: payload.documentName,
+      form_payload: payload.formData,
+      total_pages: payload.totalPages === 0 || payload.totalPages == null ? null : payload.totalPages,
+      metadata: payload.metadata ?? null,
+      coordinates: coordinatePayload
+    });
 
-      if (coordinatesError) {
-        throw new Error(`Failed to save coordinate data: ${coordinatesError.message}`);
-      }
+    if (error) {
+      // Only include safe error information, omitting error.hint
+      const details = [error.message, error.details].filter(Boolean).join(' | ');
+      throw new Error(`Failed to persist submission: ${details || 'Unknown error'}`);
     }
 
-    return submissionData.id;
+    if (!data) {
+      throw new Error('Supabase did not return a submission ID after saving.');
+    }
+
+    return data;
   }
 
   async fetchSubmissionWithCoordinates(submissionId: string): Promise<{ submission: FormSubmissionRow; coordinates: ExtractionCoordinateRow[]; }> {
