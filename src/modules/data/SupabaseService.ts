@@ -79,7 +79,7 @@ export class SupabaseService {
     const { data, error } = await client.rpc<string>('save_submission_with_coordinates', {
       document_name: payload.documentName,
       form_payload: payload.formData,
-      total_pages: payload.totalPages ?? null,
+      total_pages: payload.totalPages === 0 || payload.totalPages == null ? null : payload.totalPages,
       metadata: payload.metadata ?? null,
       coordinates: coordinatePayload
     });
