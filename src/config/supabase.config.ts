@@ -31,9 +31,23 @@ export function getSupabaseConfig(): SupabaseEnvironmentConfig {
   const metaEnv = getMetaEnv();
   const processEnv = typeof process !== 'undefined' ? (process.env as Record<string, string | undefined>) : undefined;
 
-  const url = metaEnv?.VITE_SUPABASE_URL ?? processEnv?.VITE_SUPABASE_URL ?? '';
-  const anonKey = metaEnv?.VITE_SUPABASE_ANON_KEY ?? processEnv?.VITE_SUPABASE_ANON_KEY ?? '';
-  const schema = metaEnv?.VITE_SUPABASE_SCHEMA ?? processEnv?.VITE_SUPABASE_SCHEMA ?? 'public';
+  let url = metaEnv?.VITE_SUPABASE_URL ?? processEnv?.VITE_SUPABASE_URL;
+  if (!url) {
+    console.warn('[Supabase Config] Missing environment variable: VITE_SUPABASE_URL');
+    url = '';
+  }
+
+  let anonKey = metaEnv?.VITE_SUPABASE_ANON_KEY ?? processEnv?.VITE_SUPABASE_ANON_KEY;
+  if (!anonKey) {
+    console.warn('[Supabase Config] Missing environment variable: VITE_SUPABASE_ANON_KEY');
+    anonKey = '';
+  }
+
+  let schema = metaEnv?.VITE_SUPABASE_SCHEMA ?? processEnv?.VITE_SUPABASE_SCHEMA;
+  if (!schema) {
+    console.warn('[Supabase Config] Missing environment variable: VITE_SUPABASE_SCHEMA. Defaulting to "public".');
+    schema = 'public';
+  }
 
   return { url, anonKey, schema };
 }
