@@ -70,7 +70,7 @@ export class SupabaseService {
     };
 
     const { data: submissionData, error: submissionError } = await client
-      .from<FormSubmissionRow>('form_submissions')
+      .from('form_submissions')
       .insert(submissionInsert)
       .select('id')
       .single();
