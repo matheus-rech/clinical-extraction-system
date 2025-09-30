@@ -85,7 +85,8 @@ export class SupabaseService {
     });
 
     if (error) {
-      const details = [error.message, error.details, error.hint].filter(Boolean).join(' | ');
+      // Only include safe error information, omitting error.hint
+      const details = [error.message, error.details].filter(Boolean).join(' | ');
       throw new Error(`Failed to persist submission: ${details || 'Unknown error'}`);
     }
 
