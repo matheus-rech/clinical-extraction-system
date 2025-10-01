@@ -203,6 +203,8 @@ Located in `src/config/pdf.config.ts`:
 - [Deployment Guide](DEPLOYMENT_GUIDE.md) - Deploy to various platforms
 - [Quick Start](QUICKSTART.md) - Get started quickly
 - [Production Checklist](PRODUCTION_CHECKLIST.md) - Pre-deployment checklist
+- [Supabase Integration](docs/SUPABASE_INTEGRATION.md) - Supabase backend setup
+- [Supabase Migration Status](SUPABASE_MIGRATION_STATUS.md) - Migration analysis and recommendations
 - [API Documentation](convex/README.md) - Convex backend API
 
 ---
