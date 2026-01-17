@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "convex": "^1.17.4",
-    "pdfjs-dist": "^4.2.67",
+    "pdfjs-dist": "^4.10.38",
     "@supabase/supabase-js": "^2.46.0"
   },
   "devDependencies": {
